@@ -1,0 +1,29 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "abac-check-owner"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   [""]
+      apiVersions: ["v1"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["pods"]
+  validations:
+    - expression: >
+        'owner' in object.metadata.labels &&
+        object.metadata.labels['owner'] == request.userInfo.username
+      message: "Accès refusé (ABAC Policy) : Le label 'owner' du Pod doit correspondre à votre identifiant utilisateur."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "abac-check-owner-binding"
+spec:
+  policyName: "abac-check-owner"
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        abac-demo: "enabled"
